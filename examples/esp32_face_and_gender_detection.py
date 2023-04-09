@@ -6,7 +6,7 @@ import numpy as np
 from cvlib.object_detection import draw_bbox
 import concurrent.futures
  
-url='http://10.0.0.133/cam-hi.jpg'
+url='http://10.0.0.13/cam-hi.jpg'
 frame=None
 
         
@@ -53,8 +53,8 @@ def run1():
                         (0,255,0), 2)
 
         # display output
-        frames = cv2.resize(frame, (820,460))
-        cv2.imshow("Gender Detection", frames)
+        #frames = cv2.resize(frame, (820,460))
+        cv2.imshow("Gender Detection", frame)
 
         # press "Q" to stop
         if cv2.waitKey(1) & 0xFF == ord('q'):

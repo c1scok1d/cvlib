@@ -9,7 +9,7 @@ class GenderDetection():
 
     def __init__(self):
 
-        proto_url = 'https://download.cvlib.net/config/gender_detection/gender_deploy.prototxt'
+        proto_url = 'https://github.com/arunponnusamy/cvlib-files/blob/master/config/gender_detection/gender_deploy.prototxt'
         model_url = 'https://github.com/arunponnusamy/cvlib-files/releases/download/v0.1/gender_net.caffemodel'
         save_dir = os.path.expanduser('~') + os.path.sep + '.cvlib' + os.path.sep + 'pre-trained'
 
