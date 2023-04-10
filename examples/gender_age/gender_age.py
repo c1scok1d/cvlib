@@ -5,6 +5,7 @@ import numpy as np
 import urllib.request
 import concurrent.futures
 from cvlib.object_detection import draw_bbox
+from deepface import DeepFace
 
 # https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt
 FACE_PROTO = "examples/gender_age/weights/deploy.prototxt.txt"
@@ -113,14 +114,30 @@ def get_age_predictions(face_img):
     age_net.setInput(blob)
     return age_net.forward()
 
+def get_eyes(face_img):
+    # Load eye detection model
+    face_cascade = cv2.CascadeClassifier('examples/haarcascade_frontalface_default.xml')
+    eye_cascade = cv2.CascadeClassifier('examples/haarcascade_eye.xml')
+    gray = cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
+    for (x,y,w,h) in faces:
+        cv2.rectangle(face_img,(x,y),(x+w,y+h),(255,0,0),2)
+        roi_gray = gray[y:y+h, x:x+w]
+        roi_color = face_img[y:y+h, x:x+w]
+        
+        eyes = eye_cascade.detectMultiScale(roi_gray)
+        for (ex,ey,ew,eh) in eyes:
+            cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
+
+    return face_img
 
 def predict_age_and_gender():
     """Predict the gender of the faces showing in the image"""
-    cv2.namedWindow("Gender Detector", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("Detection", cv2.WINDOW_NORMAL)
     # create a new cam object
     #cap = cv2.VideoCapture(0)
-    url='http://10.0.0.13/cam-hi.jpg' # front room cam
+    url='http://10.0.0.236/cam-hi.jpg' # front room cam
 
     while True:
         img_resp=urllib.request.urlopen(url)
@@ -139,6 +156,8 @@ def predict_age_and_gender():
         # for idx, face in enumerate(faces):
         for i, (start_x, start_y, end_x, end_y) in enumerate(faces):
             face_img = frame[start_y: end_y, start_x: end_x]
+            #face_analysis = DeepFace.analyze(img_path = img_resp)
+            #print(face_analysis)
             # predict age
             age_preds = get_age_predictions(face_img)
             # predict gender
@@ -172,20 +191,90 @@ def predict_age_and_gender():
 
         # display output
         #frames = cv2.resize(out, (820,460))
-        cv2.imshow("Object Detection", out)
+        cv2.imshow("Detection", out)
         
             # Display processed image
-        cv2.imshow("Gender Detector", frame)
+        cv2.imshow("Detection", frame)
         if cv2.waitKey(1) == ord("q"):
             break
         # uncomment if you want to save the image
         # cv2.imwrite("output.jpg", frame)
     # Cleanup
     cv2.destroyAllWindows()
+    
+def run2():
+    """Predict the gender of the faces showing in the image"""
+    cv2.namedWindow("Detection", cv2.WINDOW_NORMAL)
+    # create a new cam object
+    #cap = cv2.VideoCapture(0)
+    url='http://10.0.0.96/cam-hi.jpg' # front room cam
+
+    while True:
+        img_resp=urllib.request.urlopen(url)
+        imgnp=np.array(bytearray(img_resp.read()),dtype=np.uint8)
+        frame = cv2.imdecode(imgnp,-1)
+        
+        #_, img = cap.read()
+        # Take a copy of the initial image and resize it
+        #frame = img.copy()
+        # resize if higher than frame_width
+        if frame.shape[1] > frame_width:
+            frame = image_resize(frame, width=frame_width)
+        # predict the faces
+        faces = get_faces(frame)
+        # Loop over the faces detected
+        # for idx, face in enumerate(faces):
+        for i, (start_x, start_y, end_x, end_y) in enumerate(faces):
+            face_img = frame[start_y: end_y, start_x: end_x]
+            face_analysis = DeepFace.analyze(img_path = img_resp)
+            print(face_analysis)
+            # predict age
+            age_preds = get_age_predictions(face_img)
+            # predict gender
+            gender_preds = get_gender_predictions(face_img)
+            i = gender_preds[0].argmax()
+            gender = GENDER_LIST[i]
+            gender_confidence_score = gender_preds[0][i]
+            i = age_preds[0].argmax()
+            age = AGE_INTERVALS[i]
+            age_confidence_score = age_preds[0][i]
+            # Draw the box
+            label = f"{gender}-{gender_confidence_score*100:.1f}%, {age}-{age_confidence_score*100:.1f}%"
+            # label = "{}-{:.2f}%".format(gender, gender_confidence_score*100)
+            print(label)
+            yPos = start_y - 15
+            while yPos < 15:
+                yPos += 15
+            box_color = (255, 0, 0) if gender == "Male" else (147, 20, 255)
+            cv2.rectangle(frame, (start_x, start_y), (end_x, end_y), box_color, 2)
+            # Label processed image
+            cv2.putText(frame, label, (start_x, yPos),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.54, box_color, 2)
+
+         # apply object detection
+        bbox, label, conf = cv.detect_common_objects(frame)
+
+        print(bbox, label, conf)
+
+        # draw bounding box over detected objectsP
+        out = draw_bbox(frame, bbox, label, conf)
+
+        # display output
+        #frames = cv2.resize(out, (820,460))
+        cv2.imshow("Detection", out)
+        
+            # Display processed image
+        cv2.imshow("Detection", frame)
+        if cv2.waitKey(1) == ord("q"):
+            break
+        # uncomment if you want to save the image
+        # cv2.imwrite("output.jpg", frame)
+    # Cleanup
+    cv2.destroyAllWindows()    
 
 def object_detection():
     cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
-    url='http://10.0.0.13/cam-hi.jpg' # front room cam
+    url='http://10.0.0.236/cam-hi.jpg' # front room cam
     while True:
         img_resp=urllib.request.urlopen(url)
         imgnp=np.array(bytearray(img_resp.read()),dtype=np.uint8)
@@ -215,4 +304,4 @@ if __name__ == "__main__":
     with concurrent.futures.ProcessPoolExecutor() as executer:
             #f1= executer.submit(object_detection)
             f2= executer.submit(predict_age_and_gender)
-            #f3= executer.submit(run3)
+            f3= executer.submit(run2)
