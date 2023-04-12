@@ -132,9 +132,9 @@ def get_eyes(face_img):
 
     return face_img
 
-def predict_age_and_gender():
+def front_cam():
     """Predict the gender of the faces showing in the image"""
-    cv2.namedWindow("Detection", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("Front", cv2.WINDOW_NORMAL)
     # create a new cam object
     #cap = cv2.VideoCapture(0)
     url='http://10.0.0.236/cam-hi.jpg' # front room cam
@@ -144,10 +144,6 @@ def predict_age_and_gender():
         imgnp=np.array(bytearray(img_resp.read()),dtype=np.uint8)
         frame = cv2.imdecode(imgnp,-1)
         
-        #_, img = cap.read()
-        # Take a copy of the initial image and resize it
-        #frame = img.copy()
-        # resize if higher than frame_width
         if frame.shape[1] > frame_width:
             frame = image_resize(frame, width=frame_width)
         # predict the faces
@@ -156,31 +152,21 @@ def predict_age_and_gender():
         # for idx, face in enumerate(faces):
         for i, (start_x, start_y, end_x, end_y) in enumerate(faces):
             face_img = frame[start_y: end_y, start_x: end_x]
-            #face_analysis = DeepFace.analyze(img_path = img_resp)
-            #print(face_analysis)
-            # predict age
-            age_preds = get_age_predictions(face_img)
-            # predict gender
-            gender_preds = get_gender_predictions(face_img)
-            i = gender_preds[0].argmax()
-            gender = GENDER_LIST[i]
-            gender_confidence_score = gender_preds[0][i]
-            i = age_preds[0].argmax()
-            age = AGE_INTERVALS[i]
-            age_confidence_score = age_preds[0][i]
-            # Draw the box
-            label = f"{gender}-{gender_confidence_score*100:.1f}%, {age}-{age_confidence_score*100:.1f}%"
-            # label = "{}-{:.2f}%".format(gender, gender_confidence_score*100)
+            # run facial analysis on image in frame
+            result = DeepFace.analyze(face_img, enforce_detection=False, actions=['gender', 'age', 'race', 'emotion'])
+            label = f"Gender: {result[0]['dominant_gender'].upper()}\nAge: {result[0]['age']}\nRace: {result[0]['dominant_race'].upper()}\nEmotion: {result[0]['dominant_emotion'].upper()}"
             print(label)
             yPos = start_y - 15
             while yPos < 15:
                 yPos += 15
-            box_color = (255, 0, 0) if gender == "Male" else (147, 20, 255)
+            box_color = (255, 0, 0) if result[0]['dominant_gender'] == "Man" else (147, 20, 255)
             cv2.rectangle(frame, (start_x, start_y), (end_x, end_y), box_color, 2)
+            
             # Label processed image
-            cv2.putText(frame, label, (start_x, yPos),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.54, box_color, 2)
-
+            for line in label.splitlines():
+                yPos -=15
+                cv2.putText(frame, line, (start_x, yPos), cv2.FONT_HERSHEY_SIMPLEX, .5, box_color, 1, lineType=cv2.LINE_AA,)
+        
          # apply object detection
         bbox, label, conf = cv.detect_common_objects(frame)
 
@@ -191,32 +177,30 @@ def predict_age_and_gender():
 
         # display output
         #frames = cv2.resize(out, (820,460))
-        cv2.imshow("Detection", out)
-        
-            # Display processed image
-        cv2.imshow("Detection", frame)
-        if cv2.waitKey(1) == ord("q"):
+        cv2.imshow("Front", out)
+
+        # press "Q" to stop
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        # uncomment if you want to save the image
-        # cv2.imwrite("output.jpg", frame)
-    # Cleanup
-    cv2.destroyAllWindows()
-    
-def run2():
-    """Predict the gender of the faces showing in the image"""
-    cv2.namedWindow("Detection", cv2.WINDOW_NORMAL)
-    # create a new cam object
-    #cap = cv2.VideoCapture(0)
-    url='http://10.0.0.96/cam-hi.jpg' # front room cam
+            
+    cv2.destroyAllWindows() 
 
+   
+    
+def attached_cam(): # for attached camera
+    """Predict the gender of the faces showing in the image"""
+    cv2.namedWindow("Attached", cv2.WINDOW_NORMAL)
+    # create a new cam object
+    cap = cv2.VideoCapture(0)
+    #url='http://10.0.0.96/cam-hi.jpg' #lab window
     while True:
-        img_resp=urllib.request.urlopen(url)
-        imgnp=np.array(bytearray(img_resp.read()),dtype=np.uint8)
-        frame = cv2.imdecode(imgnp,-1)
+        #img_resp=urllib.request.urlopen(url)
+        #imgnp=np.array(bytearray(img_resp.read()),dtype=np.uint8)
+        #frame = cv2.imdecode(imgnp,-1)
         
-        #_, img = cap.read()
+        _, img = cap.read()
         # Take a copy of the initial image and resize it
-        #frame = img.copy()
+        frame = img.copy()
         # resize if higher than frame_width
         if frame.shape[1] > frame_width:
             frame = image_resize(frame, width=frame_width)
@@ -226,31 +210,21 @@ def run2():
         # for idx, face in enumerate(faces):
         for i, (start_x, start_y, end_x, end_y) in enumerate(faces):
             face_img = frame[start_y: end_y, start_x: end_x]
-            face_analysis = DeepFace.analyze(img_path = img_resp)
-            print(face_analysis)
-            # predict age
-            age_preds = get_age_predictions(face_img)
-            # predict gender
-            gender_preds = get_gender_predictions(face_img)
-            i = gender_preds[0].argmax()
-            gender = GENDER_LIST[i]
-            gender_confidence_score = gender_preds[0][i]
-            i = age_preds[0].argmax()
-            age = AGE_INTERVALS[i]
-            age_confidence_score = age_preds[0][i]
-            # Draw the box
-            label = f"{gender}-{gender_confidence_score*100:.1f}%, {age}-{age_confidence_score*100:.1f}%"
-            # label = "{}-{:.2f}%".format(gender, gender_confidence_score*100)
+            # run facial analysis on image in frame
+            result = DeepFace.analyze(face_img, enforce_detection=False, actions=['gender', 'age', 'race', 'emotion'])
+            label = f"Gender: {result[0]['dominant_gender'].upper()}\nAge: {result[0]['age']}\nRace: {result[0]['dominant_race'].upper()}\nEmotion: {result[0]['dominant_emotion'].upper()}"
             print(label)
             yPos = start_y - 15
             while yPos < 15:
                 yPos += 15
-            box_color = (255, 0, 0) if gender == "Male" else (147, 20, 255)
+            box_color = (255, 0, 0) if result[0]['dominant_gender'] == "Man" else (147, 20, 255)
             cv2.rectangle(frame, (start_x, start_y), (end_x, end_y), box_color, 2)
+            
             # Label processed image
-            cv2.putText(frame, label, (start_x, yPos),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.54, box_color, 2)
-
+            for line in label.splitlines():
+                yPos -=15
+                cv2.putText(frame, line, (start_x, yPos), cv2.FONT_HERSHEY_SIMPLEX, .5, box_color, 1, lineType=cv2.LINE_AA,)
+        
          # apply object detection
         bbox, label, conf = cv.detect_common_objects(frame)
 
@@ -261,10 +235,10 @@ def run2():
 
         # display output
         #frames = cv2.resize(out, (820,460))
-        cv2.imshow("Detection", out)
+        cv2.imshow("Attached", out)
         
             # Display processed image
-        cv2.imshow("Detection", frame)
+        cv2.imshow("Attached", frame)
         if cv2.waitKey(1) == ord("q"):
             break
         # uncomment if you want to save the image
@@ -272,15 +246,40 @@ def run2():
     # Cleanup
     cv2.destroyAllWindows()    
 
-def object_detection():
-    cv2.namedWindow("Object Detection", cv2.WINDOW_NORMAL)
-    url='http://10.0.0.236/cam-hi.jpg' # front room cam
+def lab_win_cam():
+    cv2.namedWindow("Lab Window", cv2.WINDOW_NORMAL)
+    url='http://10.0.0.96/cam-hi.jpg' # lab window cam
     while True:
         img_resp=urllib.request.urlopen(url)
         imgnp=np.array(bytearray(img_resp.read()),dtype=np.uint8)
         frame = cv2.imdecode(imgnp,-1)
  
-        # apply object detection
+        #frame = img.copy()
+        # resize if higher than frame_width
+        if frame.shape[1] > frame_width:
+            frame = image_resize(frame, width=frame_width)
+        # predict the faces
+        faces = get_faces(frame)
+        # Loop over the faces detected
+        # for idx, face in enumerate(faces):
+        for i, (start_x, start_y, end_x, end_y) in enumerate(faces):
+            face_img = frame[start_y: end_y, start_x: end_x]
+            # run facial analysis on image in frame
+            result = DeepFace.analyze(face_img, enforce_detection=False, actions=['gender', 'age', 'race', 'emotion'])
+            label = f"Gender: {result[0]['dominant_gender'].upper()}\nAge: {result[0]['age']}\nRace: {result[0]['dominant_race'].upper()}\nEmotion: {result[0]['dominant_emotion'].upper()}"
+            print(label)
+            yPos = start_y - 15
+            while yPos < 15:
+                yPos += 15
+            box_color = (255, 0, 0) if result[0]['dominant_gender'] == "Man" else (147, 20, 255)
+            cv2.rectangle(frame, (start_x, start_y), (end_x, end_y), box_color, 2)
+            
+            # Label processed image
+            for line in label.splitlines():
+                yPos -=15
+                cv2.putText(frame, line, (start_x, yPos), cv2.FONT_HERSHEY_SIMPLEX, .5, box_color, 1, lineType=cv2.LINE_AA,)
+        
+         # apply object detection
         bbox, label, conf = cv.detect_common_objects(frame)
 
         print(bbox, label, conf)
@@ -290,7 +289,7 @@ def object_detection():
 
         # display output
         #frames = cv2.resize(out, (820,460))
-        cv2.imshow("Object Detection", out)
+        cv2.imshow("Lab Window", out)
 
         # press "Q" to stop
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -302,6 +301,6 @@ if __name__ == "__main__":
     #predict_age_and_gender()
     #object_detection()
     with concurrent.futures.ProcessPoolExecutor() as executer:
-            #f1= executer.submit(object_detection)
-            f2= executer.submit(predict_age_and_gender)
-            f3= executer.submit(run2)
+            f1= executer.submit(attached_cam)
+            f2= executer.submit(lab_win_cam)
+            #f3= executer.submit(front_cam)
